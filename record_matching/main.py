@@ -1,5 +1,5 @@
-from .context import build_session_context
-from vectorlink_py import template as tpl
+from .context import build_session_context, EMBEDDING_SIZE, MODEL
+from vectorlink_py import template as tpl, dedup, embed
 import sys
 
 
@@ -51,10 +51,25 @@ def template_records():
         ],
     )
 
+def dedup_records():
+    ctx = build_session_context()
+
+    eprintln("dedupping...")
+    dedup.dedup_from_into(ctx, f"output/templated/", "output/dedup/")
+
+def vectorize_records():
+    ctx = build_session_context()
+
+    eprintln("vectorizing...")
+    embed.vectorize(
+        ctx, "output/dedup/", "output/vectors/", model=MODEL, dimension=EMBEDDING_SIZE
+    )
 
 
 def main():
     template_records()
+    dedup_records()
+    vectorize_records()
 
 
 if __name__ == "__main__":

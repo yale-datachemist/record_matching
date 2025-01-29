@@ -20,6 +20,8 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 template-records = "record_matching.main:template_records"
+dedup-records = "record_matching.main:dedup_records"
+vectorize-records = "record_matching.main:vectorize_records"
 main = "record_matching.main:main"
 
 [tool.uv.sources]

@@ -1,6 +1,9 @@
 import datafusion as df
 import pyarrow as pa
 
+EMBEDDING_SIZE=3072
+MODEL="text-embedding-3-large"
+
 RECORD_SCHEMA = pa.schema(
     [
         pa.field("id", pa.int64(), nullable=False),
@@ -18,6 +21,13 @@ TEMPLATED_SCHEMA = pa.schema(
     ]
 )
 
+DEDUP_SCHEMA = pa.schema(
+    [
+        pa.field("hash", pa.string_view(), nullable=False),
+        pa.field("templated", pa.string_view(), nullable=False),
+    ]
+)
+
 
 def build_session_context(input="yale_people_v3/",location="output/") -> df.SessionContext:
     ctx = df.SessionContext()
@@ -30,6 +40,8 @@ def build_session_context(input="yale_people_v3/",location="output/") -> df.Sess
         schema=TEMPLATED_SCHEMA,
         table_partition_cols=[("key", "string")],
     )
+    ctx.register_parquet("dedup", f"{location}dedup/", schema=DEDUP_SCHEMA)
+
 
     # register more here
 
