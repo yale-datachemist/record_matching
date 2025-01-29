@@ -1,0 +1,26 @@
+[project]
+name = "vl-datafusion-example"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "datafusion>=0.43.0",
+    "pandas>=2.2.3",
+    "pybars3>=0.9.7",
+    "scikit-learn>=1.6.1",
+    "scipy>=1.15.1",
+    "vectorlink-gpu",
+    "vectorlink-py",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+hello = "vl_datafusion_example.main:main"
+
+[tool.uv.sources]
+vectorlink-gpu = { git = "ssh://git@github.com/vectorlink-ai/vectorlink-gpu" }
+vectorlink-py = { git = "ssh://git@github.com/vectorlink-ai/vectorlink.py" }
