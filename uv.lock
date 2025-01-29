@@ -625,7 +625,7 @@ wheels = [
 ]
 
 [[package]]
-name = "record-matching-example"
+name = "record-matching"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
