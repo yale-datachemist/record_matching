@@ -22,7 +22,21 @@ build-backend = "hatchling.build"
 template-records = "record_matching.main:template_records"
 dedup-records = "record_matching.main:dedup_records"
 vectorize-records = "record_matching.main:vectorize_records"
-main = "record_matching.main:main"
+average-fields = "record_matching.main:average_fields"
+build-index-map = "record_matching.main:build_index_map"
+index-field = "record_matching.main:index_field"
+discover-training-set = "record_matching.main:discover_training_set"
+calculate-training-field-distances = 'record_matching.main:calculate_training_field_distances'
+train-weights = 'record_matching.main:train_weights'
+filter-candidates = 'record_matching.main:filter_candidates'
+calculate-field-distances = 'record_matching.main:calculate_field_distances'
+classify-record-matches = 'record_matching.main:classify_record_matches'
+search = 'record_matching.main:search'
+build-clusters = 'record_matching.main:build_clusters'
+adjusted-rand-score = 'record_matching.main:calculate_adjusted_rand_score'
+show-weights = 'record_matching.main:show_weights'
+recall = 'record_matching.main:recall'
+run-all = "record_matching.main:main"
 
 [tool.uv.sources]
 vectorlink-gpu = { git = "ssh://git@github.com/vectorlink-ai/vectorlink-gpu" }
