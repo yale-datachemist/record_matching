@@ -31,7 +31,7 @@ DEDUP_SCHEMA = pa.schema(
 INDEX_MAP_SCHEMA = pa.schema(
     [
         pa.field("vector_id", pa.int64(), nullable=False),
-        pa.field("id", pa.int64(), nullable=False),
+        pa.field("id", pa.string_view(), nullable=False),
         pa.field("hash", pa.string_view(), nullable=False),
     ]
 )
@@ -61,8 +61,8 @@ TRAINING_SET_SCHEMA = pa.schema(
 
 FIELD_DISTANCES_SCHEMA = pa.schema(
     [
-        pa.field("left_tid", pa.int64(), nullable=False),
-        pa.field("right_tid", pa.int64(), nullable=False),
+        pa.field("left_id", pa.string_view(), nullable=False),
+        pa.field("right_id", pa.string_view(), nullable=False),
         pa.field("key", pa.string_view(), nullable=False),
         pa.field("distance", pa.float32(), nullable=False),
     ]
@@ -84,15 +84,15 @@ WEIGHTS_SCHEMA = pa.schema(
 
 FILTERED_SCHEMA = pa.schema(
     [
-        pa.field("left", pa.int64(), nullable=False),
-        pa.field("right", pa.int64(), nullable=False),
+        pa.field("left", pa.string_view(), nullable=False),
+        pa.field("right", pa.string_view(), nullable=False),
     ]
 )
 
 PREDICTION_SCHEMA = pa.schema(
     [
-        pa.field("left", pa.int64(), nullable=False),
-        pa.field("right", pa.int64(), nullable=False),
+        pa.field("left", pa.string_view(), nullable=False),
+        pa.field("right", pa.string_view(), nullable=False),
         pa.field("prediction", pa.float32(), nullable=False),
     ]
 )
@@ -100,7 +100,7 @@ PREDICTION_SCHEMA = pa.schema(
 CLUSTERS_SCHEMA = pa.schema(
     [
         pa.field("cluster_id", pa.int64(), nullable=False),
-        pa.field("cluster_element", pa.int64(), nullable=False),
+        pa.field("cluster_element", pa.string_view(), nullable=False),
     ]
 )
 

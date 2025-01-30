@@ -10,6 +10,8 @@ from vectorlink_gpu.datafusion import dataframe_to_tensor, tensor_to_arrow
 import pyarrow as pa
 import pandas as pd
 import numpy as np
+import scipy
+import re
 
 from openai import OpenAI
 import openai as oa
@@ -274,7 +276,7 @@ def ask_oracle_with_vid(ctx, vid1, vid2):
 
     y_or_n = ask_oracle(record1["templated"], record2["templated"])
 
-    return (y_or_n, record1[id], record2[id])
+    return (y_or_n, record1["id"], record2["id"])
 
 
 def ask_oracle_with_id(ctx, id1, id2):
@@ -288,11 +290,11 @@ def ask_oracle_with_id(ctx, id1, id2):
 
 
 def ask_oracle(s1, s2):
-    subject = "pieces of music"
+    subject = "Historic People who are creators of works"
     client = OpenAI()
 
-    prompt = "You are a classifier deciding if two songs are a match or not."
-    question = f"""Tell me whether the following two records are referring to the same entity or a different entity using a chain of reasoning followed by a single yes or no answer on a single line, without any formatting.
+    prompt = "You are a classifier deciding if two people are the same or not not."
+    question = f"""Tell me whether the following two records are referring to the same person or a different person using a chain of reasoning followed by a single yes or no answer on a single line, without any formatting.
 
 1:  {s1}
 
