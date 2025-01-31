@@ -19,6 +19,9 @@ import openai as oa
 from sklearn.utils import shuffle
 from sklearn.metrics.cluster import adjusted_rand_score
 
+from sklearn import linear_model
+from sklearn import metrics
+
 """
 record: string
 marcKey: string
@@ -350,7 +353,7 @@ def candidate_field_distances(ctx, candidates: df.DataFrame, destination: str):
             how="left",
             left_on="left",
             right_on="id",
-        ).drop(id)
+        ).drop("id")
         field_match = left_match.join(
             field.select(df.col("id"), df.col("hash").alias("right_hash")),
             how="left",
@@ -376,13 +379,13 @@ def candidate_field_distances(ctx, candidates: df.DataFrame, destination: str):
                 df.functions.coalesce(
                     df.col("left_embedding"),
                     df.lit(average_for_key).cast(
-                        pa.list_(pa.float32(), context.EMBEDDING_SIZE)
+                        pa.list_(pa.float32(), EMBEDDING_SIZE)
                     ),
                 ).alias(f"left_embedding"),
                 df.functions.coalesce(
                     df.col("right_embedding"),
                     df.lit(average_for_key).cast(
-                        pa.list_(pa.float32(), context.EMBEDDING_SIZE)
+                        pa.list_(pa.float32(), EMBEDDING_SIZE)
                     ),
                 ).alias(f"right_embedding"),
                 df.col("left").alias("left_id"),
@@ -392,13 +395,13 @@ def candidate_field_distances(ctx, candidates: df.DataFrame, destination: str):
         size = vector_comparisons.count()
         print(f"total comparisons: {size}")
         left_tensor = torch.empty(
-            (size, context.EMBEDDING_SIZE), dtype=torch.float32, device="cuda"
+            (size, EMBEDDING_SIZE), dtype=torch.float32, device="cuda"
         )
         dataframe_to_tensor(
             vector_comparisons.select(df.col("left_embedding")), left_tensor
         )
         right_tensor = torch.empty(
-            (size, context.EMBEDDING_SIZE), dtype=torch.float32, device="cuda"
+            (size, EMBEDDING_SIZE), dtype=torch.float32, device="cuda"
         )
         dataframe_to_tensor(
             vector_comparisons.select(df.col("right_embedding")), right_tensor
@@ -492,12 +495,11 @@ def search_string(query: str, ann: Optional[ANN] = None) -> df.DataFrame:
         .sort(df.col("distance"))
         .select(
             df.col("distance"),
+            df.col("attribution"),
+            df.col("person"),
+            df.col("provision"),
+            df.col("roles"),
             df.col("title"),
-            df.col("artist"),
-            df.col("album"),
-            df.col("year"),
-            df.col("language"),
-            df.col("length"),
         )
     )
 
@@ -516,10 +518,10 @@ def search():
 def ann_search(ctx: df.SessionContext, ann: ANN, query_string: str) -> df.DataFrame:
     client = OpenAI()
 
-    response = client.embeddings.create(input=query_string, model=context.MODEL)
+    response = client.embeddings.create(input=query_string, model=MODEL)
     embedding = response.data[0].embedding
     query_tensor = torch.tensor(embedding, dtype=torch.float32, device="cuda").reshape(
-        (1, context.EMBEDDING_SIZE)
+        (1, EMBEDDING_SIZE)
     )
 
     result = ann.search(query_tensor)
@@ -529,7 +531,7 @@ def ann_search(ctx: df.SessionContext, ann: ANN, query_string: str) -> df.DataFr
         pa.RecordBatch.from_arrays([matches, distances], ["match", "distance"])
     )
 
-    records = ctx.table("records")
+    records = ctx.table("csv")
     index_map = ctx.table("index_map")
 
     return (
@@ -555,11 +557,11 @@ def filter_candidates():
             ctx.from_pydict(results).write_parquet("output/filtered/")
             left = []
             right = []
-        tid1 = index_map[index_map["vector_id"] == i][id].to_numpy()
+        tid1 = index_map[index_map["vector_id"] == i]["id"].to_numpy()
         distances = ann.distances[i]
         positions = distances < threshold
         indices = ann.beams[i][positions].cpu().detach().numpy()
-        tids = index_map[index_map["vector_id"].isin(indices)][id].to_numpy()
+        tids = index_map[index_map["vector_id"].isin(indices)]["id"].to_numpy()
         left += list(tid1.repeat(len(tids)))
         right += list(tids)
     if left is not []:
@@ -617,16 +619,16 @@ def classify_record_matches():
 
 
 def build_clusters():
-    inclusion_threshold = 0.87  # 0.8  # 0.86
+    inclusion_threshold = 0.97  # 0.8  # 0.86
     ctx = build_session_context()
-    ids = ctx.table("records").select(df.col("id")).to_pydict()[id]
+    ids = ctx.table("csv").select(df.col("id")).to_pydict()["id"]
     disjoint_set = scipy.cluster.hierarchy.DisjointSet(ids)
     matches = ctx.table("prediction").filter(df.col("prediction") > inclusion_threshold)
     for batch in matches.execute_stream():
         batch = batch.to_pyarrow().to_pandas()
         for _, record in batch.iterrows():
-            left = int(record["left"])
-            right = int(record["right"])
+            left = record["left"]
+            right = record["right"]
             disjoint_set.merge(left, right)
 
     x = disjoint_set.subsets()
@@ -704,7 +706,7 @@ def calculate_expanded_match(frame: df.DataFrame) -> df.DataFrame:
 
 def calculate_adjusted_rand_score():
     ctx = build_session_context()
-    orig = ctx.table("records").sort(df.col("id")).select('"CID"').to_pydict()["CID"]
+    orig = ctx.table("csv").sort(df.col("id")).select('"CID"').to_pydict()["CID"]
 
     ours = (
         ctx.table("clusters")
@@ -721,18 +723,12 @@ def calculate_adjusted_rand_score():
 def recall():
     ctx = build_session_context()
 
-    records = ctx.table("records")
+    records = ctx.table("matches")
+    ## This needs to take matches from the data matches csv
     original_match = (
-        records.select(df.col("id").alias("left"), df.col('"CID"').alias("cid_left"))
-        .join(
-            records.select(
-                df.col("id").alias("right"), df.col('"CID"').alias("cid_right")
-            ),
-            how="inner",
-            left_on="cid_left",
-            right_on="cid_right",
+        records.select(
+            df.col('"Source"').alias("left"), df.col('"Target"').alias("right")
         )
-        .filter(df.col("left") < df.col("right"))
         .sort(df.col("left"), df.col("right"))
         .select(
             df.functions.array(df.col("left"), df.col("right")).alias("original_pair")
@@ -835,19 +831,15 @@ def openai_compare_fields(
 
 def openai_compare_records_templated(
     ctx: df.SessionContext,
-    tid1: int,
-    tid2: int,
+    tid1: str,
+    tid2: str,
     template: str,
     model="text-embedding-3-small",
 ) -> float:
     compiler = pybars.Compiler()
     compiled_template = compiler.compile(template)
-    r1 = ctx.sql(
-        f"""select title, album, artist, length, language, year from records where id = {tid1}"""
-    ).to_pylist()[0]
-    r2 = ctx.sql(
-        f"""select title, album, artist, length, language, year from records where id = {tid2}"""
-    ).to_pylist()[0]
+    r1 = ctx.sql(f"""select * from csv where id = {tid1}""").to_pylist()[0]
+    r2 = ctx.sql(f"""select * where id = {tid2}""").to_pylist()[0]
 
     s1 = compiled_template(r1)
     s2 = compiled_template(r2)

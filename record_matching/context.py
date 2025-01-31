@@ -4,15 +4,6 @@ import pyarrow as pa
 EMBEDDING_SIZE = 3072
 MODEL = "text-embedding-3-large"
 
-RECORD_SCHEMA = pa.schema(
-    [
-        pa.field("id", pa.int64(), nullable=False),
-        pa.field("field1", pa.string(), nullable=True),
-        pa.field("field2", pa.string(), nullable=True),
-        pa.field("field3", pa.string(), nullable=True),
-    ]
-)
-
 TEMPLATED_SCHEMA = pa.schema(
     [
         pa.field("id", pa.string_view(), nullable=False),
@@ -53,8 +44,8 @@ ANN_SCHEMA = pa.schema(
 
 TRAINING_SET_SCHEMA = pa.schema(
     [
-        pa.field("left", pa.int64(), nullable=False),
-        pa.field("right", pa.int64(), nullable=False),
+        pa.field("left", pa.string_view(), nullable=False),
+        pa.field("right", pa.string_view(), nullable=False),
         pa.field("match", pa.bool_(), nullable=False),
     ]
 )
@@ -71,14 +62,12 @@ FIELD_DISTANCES_SCHEMA = pa.schema(
 WEIGHTS_SCHEMA = pa.schema(
     [
         pa.field("intercept", pa.float32(), nullable=False),
-        pa.field("album", pa.float32(), nullable=False),
-        pa.field("artist", pa.float32(), nullable=False),
+        pa.field("attribution", pa.float32(), nullable=False),
         pa.field("composite", pa.float32(), nullable=False),
-        pa.field("language", pa.float32(), nullable=False),
-        pa.field("length", pa.float32(), nullable=False),
-        pa.field("number", pa.float32(), nullable=False),
+        pa.field("person", pa.float32(), nullable=False),
+        pa.field("provision", pa.float32(), nullable=False),
+        pa.field("roles", pa.float32(), nullable=False),
         pa.field("title", pa.float32(), nullable=False),
-        pa.field("year", pa.float32(), nullable=False),
     ]
 )
 
@@ -117,6 +106,7 @@ def build_session_context(
 ) -> df.SessionContext:
     ctx = df.SessionContext()
     ctx.register_csv("csv", f"{input}benchmark_data_records.csv")
+    ctx.register_csv("matches", f"{input}benchmark_data_matches.csv")
     # ctx.register_parquet("records", f"{location}records/", schema=RECORD_SCHEMA)
 
     ctx.register_parquet(
