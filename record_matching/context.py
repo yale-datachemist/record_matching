@@ -68,6 +68,9 @@ WEIGHTS_SCHEMA = pa.schema(
         pa.field("provision", pa.float32(), nullable=False),
         pa.field("roles", pa.float32(), nullable=False),
         pa.field("title", pa.float32(), nullable=False),
+        pa.field("subjects", pa.float32(), nullable=False),
+        pa.field("genres", pa.float32(), nullable=False),
+        pa.field("relatedWork", pa.float32(), nullable=False),
     ]
 )
 

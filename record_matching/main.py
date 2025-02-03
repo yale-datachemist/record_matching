@@ -37,15 +37,19 @@ recordId: int64
 """
 
 TEMPLATES = {
-    "title": "{{#if title}}work title: {{title}}\n{{/if}}",
-    "person": "{{#if person}}person name: {{person}}\n{{/if}}",
-    "roles": "{{#if roles}}person roles: {{roles}}\n{{/if}}",
-    "attribution": "{{#if attribution}}work attribution: {{attribution}}\n{{/if}}",
-    "provision": "{{#if provision}}provision information: {{provision}}\n{{/if}}",
+    "record": "{{record}}",
+    "title": "{{#if title}}Title: {{title}}\n{{/if}}",
+    "person": "{{#if person}}Name: {{person}}\n{{/if}}",
+    "roles": "{{#if roles}}Roles: {{roles}}\n{{/if}}",
+    "attribution": "{{#if attribution}}Attribution: {{attribution}}\n{{/if}}",
+    "provision": "{{#if provision}}Provision information: {{provision}}\n{{/if}}",
+    "subjects": "{{#if subjects}}Subjects: {{subjects}}\n{{/if}}",
+    "genres": "{{#if genres}}Genres: {{genres}}\n{{/if}}",
+    "relatedWork": "{{#if relatedWork}}Related work: {{relatedWork}}\n{{/if}}",
 }
 
 TEMPLATES["composite"] = (
-    f'{TEMPLATES["title"]}{TEMPLATES["person"]}{TEMPLATES["roles"]}{TEMPLATES["attribution"]}{TEMPLATES["provision"]}'
+    f'{TEMPLATES["record"]}'
 )
 
 
@@ -69,6 +73,9 @@ def template_records():
             "roles",
             "attribution",
             "provision",
+            "subjects",
+            "genres",
+            "relatedWork"
         ],
     )
 
@@ -134,7 +141,7 @@ def average_fields():
 def build_index_map():
     ctx = build_session_context()
 
-    ctx.table("templated").filter(df.col("key") == "composite").sort(
+    ctx.table("templated").filter(df.col("key") == "person").sort(
         df.col("hash")
     ).select(
         (df.functions.row_number() - 1).alias("vector_id"),
@@ -248,7 +255,7 @@ def discover_training_set():
 def get_record_from_vid(ctx, vid) -> Dict:
     templated_df = (
         ctx.table("templated")
-        .filter(df.col("key") == "composite")
+        .filter(df.col("key") == "person")
         .select(df.col("templated"), df.col("id").alias("tid"))
     )
     result = (
@@ -284,10 +291,10 @@ def ask_oracle_with_vid(ctx, vid1, vid2):
 
 def ask_oracle_with_id(ctx, id1, id2):
     record1 = ctx.sql(
-        f"SELECT templated FROM templated WHERE key = 'composite' AND id = {id1}"
+        f"SELECT templated FROM templated WHERE key = 'person' AND id = {id1}"
     ).to_pylist()[0]
     record2 = ctx.sql(
-        f"SELECT templated FROM templated WHERE key = 'composite' AND id = {id2}"
+        f"SELECT templated FROM templated WHERE key = 'person' AND id = {id2}"
     ).to_pylist()[0]
     return ask_oracle(record1["templated"], record2["templated"])
 
@@ -496,9 +503,12 @@ def search_string(query: str, ann: Optional[ANN] = None) -> df.DataFrame:
         .select(
             df.col("distance"),
             df.col("attribution"),
+            df.col("genres"),
             df.col("person"),
             df.col("provision"),
+            df.col("relatedWorks"),
             df.col("roles"),
+            df.col("subjects")
             df.col("title"),
         )
     )
