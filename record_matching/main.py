@@ -45,7 +45,7 @@ TEMPLATES = {
     "provision": "{{#if provision}}Provision information: {{provision}}\n{{/if}}",
     "subjects": "{{#if subjects}}Subjects: {{subjects}}\n{{/if}}",
     "genres": "{{#if genres}}Genres: {{genres}}\n{{/if}}",
-    "relatedWork": "{{#if relatedWork}}Related work: {{relatedWork}}\n{{/if}}",
+    "relatedwork": "{{#if relatedwork}}Related work: {{relatedwork}}\n{{/if}}",
 }
 
 TEMPLATES["composite"] = (
@@ -75,7 +75,7 @@ def template_records():
             "provision",
             "subjects",
             "genres",
-            "relatedWork"
+            "relatedwork"
         ],
     )
 
@@ -506,9 +506,9 @@ def search_string(query: str, ann: Optional[ANN] = None) -> df.DataFrame:
             df.col("genres"),
             df.col("person"),
             df.col("provision"),
-            df.col("relatedWorks"),
+            df.col("relatedwork"),
             df.col("roles"),
-            df.col("subjects")
+            df.col("subjects"),
             df.col("title"),
         )
     )
@@ -864,7 +864,7 @@ def main():
     average_fields()
     build_index_map()
     index_field()
-    discover_training_set()
+    #discover_training_set()
     calculate_training_field_distances()
     train_weights()
     filter_candidates()
