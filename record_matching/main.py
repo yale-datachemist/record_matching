@@ -143,7 +143,7 @@ def average_fields():
 def build_index_map():
     ctx = build_session_context()
 
-    ctx.table("templated").filter(df.col("key") == "personroles").sort(
+    ctx.table("templated").filter(df.col("key") == "record").sort(
         df.col("hash")
     ).select(
         (df.functions.row_number() - 1).alias("vector_id"),
@@ -257,7 +257,7 @@ def discover_training_set():
 def get_record_from_vid(ctx, vid) -> Dict:
     templated_df = (
         ctx.table("templated")
-        .filter(df.col("key") == "personroles")
+        .filter(df.col("key") == "record")
         .select(df.col("templated"), df.col("id").alias("tid"))
     )
     result = (
@@ -293,10 +293,10 @@ def ask_oracle_with_vid(ctx, vid1, vid2):
 
 def ask_oracle_with_id(ctx, id1, id2):
     record1 = ctx.sql(
-        f"SELECT templated FROM templated WHERE key = 'personroles' AND id = {id1}"
+        f"SELECT templated FROM templated WHERE key = 'record' AND id = {id1}"
     ).to_pylist()[0]
     record2 = ctx.sql(
-        f"SELECT templated FROM templated WHERE key = 'personroles' AND id = {id2}"
+        f"SELECT templated FROM templated WHERE key = 'record' AND id = {id2}"
     ).to_pylist()[0]
     return ask_oracle(record1["templated"], record2["templated"])
 
@@ -512,6 +512,7 @@ def search_string(query: str, ann: Optional[ANN] = None) -> df.DataFrame:
             df.col("roles"),
             df.col("subjects"),
             df.col("title"),
+            df.col("record"),
             df.col("nametitle"),
             df.col("personroles"),
         )
