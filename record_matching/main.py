@@ -47,7 +47,7 @@ TEMPLATES = {
     "genres": "{{#if genres}}Genres: {{genres}}\n{{/if}}",
     "relatedwork": "{{#if relatedwork}}Related work: {{relatedwork}}\n{{/if}}",
     "nametitle": "{{person}}\n{{title}}\n",
-    "personroles": "Person: {{person}}\nRoles: {{roles}}\n"
+    "personroles": "Person: {{person}}\nRoles: {{roles}}\nTitle: {{title}}\n",
 }
 
 TEMPLATES["composite"] = (
