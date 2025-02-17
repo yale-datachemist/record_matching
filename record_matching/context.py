@@ -109,7 +109,7 @@ def build_session_context(
 ) -> df.SessionContext:
     ctx = df.SessionContext()
     ctx.register_csv("csv", f"{input}benchmark_data_records.csv")
-    ctx.register_csv("matches", f"{input}benchmark_data_matches_expanded.csv")
+    ctx.register_csv("matches", f"{input}benchmark_data_matches_expanded_smaller.csv")
     # ctx.register_parquet("records", f"{location}records/", schema=RECORD_SCHEMA)
 
     ctx.register_parquet(
