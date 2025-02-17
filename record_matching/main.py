@@ -32,21 +32,21 @@ attribution: string
 provision: string
 subjects: string
 genres: string
-relatedWork: string
+relatedwork: string
 recordId: int64
 """
 
 TEMPLATES = {
     "composite": "{{record}}",
     "title": "{{#if title}}Title: {{title}}\n{{/if}}",
-    "person": "{{#if person}}Name: {{person}}\n{{/if}}",
+    "person": "{{#if person}}Person: {{person}}\n{{/if}}",
     "roles": "{{#if roles}}Roles: {{roles}}\n{{/if}}",
     "attribution": "{{#if attribution}}Attribution: {{attribution}}\n{{/if}}",
     "provision": "{{#if provision}}Provision information: {{provision}}\n{{/if}}",
     "subjects": "{{#if subjects}}Subjects: {{subjects}}\n{{/if}}",
     "genres": "{{#if genres}}Genres: {{genres}}\n{{/if}}",
     "relatedwork": "{{#if relatedwork}}Related work: {{relatedwork}}\n{{/if}}",
-    "nametitle": "{{person}}\n{{title}}\n",
+    "nametitle": "Person: {{person}}\n{{#if title}}Title: {{title}}\n{{/if}}",
     "personroles": "Person: {{person}}\nRoles: {{roles}}\n",
 }
 
@@ -77,7 +77,7 @@ def template_records():
             "provision",
             "subjects",
             "genres",
-            "relatedwork"
+            "relatedwork",
         ],
     )
 
