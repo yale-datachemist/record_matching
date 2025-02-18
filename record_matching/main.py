@@ -48,6 +48,7 @@ TEMPLATES = {
     "genres": "{{#if genres}}Genres: {{genres}}\n{{/if}}",
     "relatedwork": "{{#if relatedwork}}Related work: {{relatedwork}}\n{{/if}}",
     "nametitle": "Person: {{person}}\n{{#if title}}Title: {{title}}\n{{/if}}",
+    "namesubjects": "Person: {{person}}\nSubjects: {{subjects}}\n",
     "personroles": "Person: {{person}}\nRoles: {{roles}}\n",
 }
 
@@ -142,7 +143,7 @@ def average_fields():
     for key in TEMPLATES.keys():
         write_field_averages(ctx, key, "output/vector_averages/")
 
-INDEX_FIELD="nametitle"
+INDEX_FIELD="namesubjects"
 
 def build_index_map():
     ctx = build_session_context()

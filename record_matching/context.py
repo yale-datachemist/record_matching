@@ -72,6 +72,7 @@ WEIGHTS_SCHEMA = pa.schema(
         pa.field("genres", pa.float32(), nullable=False),
         pa.field("relatedwork", pa.float32(), nullable=False),
         pa.field("nametitle", pa.float32(), nullable=False),
+        pa.field("namesubjects", pa.float32(), nullable=False),
         pa.field("personroles", pa.float32(), nullable=False),
     ]
 )
@@ -111,7 +112,7 @@ def build_session_context(
 ) -> df.SessionContext:
     ctx = df.SessionContext()
     ctx.register_csv("csv", f"{input}benchmark_data_records.csv")
-    ctx.register_csv("matches", f"{input}benchmark_data_matches_expanded.csv")
+    ctx.register_csv("matches", f"{input}benchmark_data_matches_expanded_small.csv")
     # ctx.register_parquet("records", f"{location}records/", schema=RECORD_SCHEMA)
 
     ctx.register_parquet(
