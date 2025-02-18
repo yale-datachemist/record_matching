@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 import scipy
 import re
+import argparse
 
 from openai import OpenAI
 import openai as oa
@@ -58,6 +59,17 @@ TEMPLATES = {
 def eprintln(string):
     print(string, file=sys.stderr)
 
+COLUMNS_OF_INTEREST = [
+    "record",
+    "title",
+    "person",
+    "roles",
+    "attribution",
+    "provision",
+    "subjects",
+    "genres",
+    "relatedwork",
+]
 
 def template_records():
     ctx = build_session_context()
@@ -69,16 +81,7 @@ def template_records():
         TEMPLATES,
         "output/templated/",
         id_column="id",
-        columns_of_interest=[
-            "title",
-            "person",
-            "roles",
-            "attribution",
-            "provision",
-            "subjects",
-            "genres",
-            "relatedwork",
-        ],
+        columns_of_interest=COLUMNS_OF_INTEREST,
     )
 
 
@@ -139,11 +142,13 @@ def average_fields():
     for key in TEMPLATES.keys():
         write_field_averages(ctx, key, "output/vector_averages/")
 
+INDEX_FIELD="composite"
 
 def build_index_map():
     ctx = build_session_context()
 
-    ctx.table("templated").filter(df.col("key") == "personroles").sort(
+    #(ctx.sql(f"select id, hash from templated where id in (select first_value(id) over (partition by hash) as id from templated where key='person') and key='person'").with_column('vector_idJ', df.functions.row_number()-1).select_columns('vector_id', 'id', 'hash')
+    ctx.table("templated").filter(df.col("key") == INDEX_FIELD).sort(
         df.col("hash")
     ).select(
         (df.functions.row_number() - 1).alias("vector_id"),
@@ -257,7 +262,7 @@ def discover_training_set():
 def get_record_from_vid(ctx, vid) -> Dict:
     templated_df = (
         ctx.table("templated")
-        .filter(df.col("key") == "personroles")
+        .filter(df.col("key") == INDEX_FIELD)
         .select(df.col("templated"), df.col("id").alias("tid"))
     )
     result = (
@@ -293,10 +298,10 @@ def ask_oracle_with_vid(ctx, vid1, vid2):
 
 def ask_oracle_with_id(ctx, id1, id2):
     record1 = ctx.sql(
-        f"SELECT templated FROM templated WHERE key = 'personroles' AND id = {id1}"
+        f"SELECT templated FROM templated WHERE key = '{INDEX_FIELD}' AND id = {id1}"
     ).to_pylist()[0]
     record2 = ctx.sql(
-        f"SELECT templated FROM templated WHERE key = 'personroles' AND id = {id2}"
+        f"SELECT templated FROM templated WHERE key = '{INDEX_FIELD}' AND id = {id2}"
     ).to_pylist()[0]
     return ask_oracle(record1["templated"], record2["templated"])
 
@@ -502,20 +507,7 @@ def search_string(query: str, ann: Optional[ANN] = None) -> df.DataFrame:
     result = (
         ann_search(ctx, ann, query)
         .sort(df.col("distance"))
-        .select(
-            df.col("distance"),
-            df.col("attribution"),
-            df.col("genres"),
-            df.col("person"),
-            df.col("provision"),
-            df.col("relatedwork"),
-            df.col("roles"),
-            df.col("subjects"),
-            df.col("title"),
-            df.col("record"),
-            df.col("nametitle"),
-            df.col("personroles"),
-        )
+        .select_columns(*COLUMNS_OF_INTEREST)
     )
 
     return result
@@ -742,7 +734,7 @@ def recall():
     ## This needs to take matches from the data matches csv
     original_match = (
         records.select(
-            df.col('"Source"').alias("left"), df.col('"Target"').alias("right")
+            df.col('left'), df.col('right')
         )
         .sort(df.col("left"), df.col("right"))
         .select(
