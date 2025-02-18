@@ -142,7 +142,7 @@ def average_fields():
     for key in TEMPLATES.keys():
         write_field_averages(ctx, key, "output/vector_averages/")
 
-INDEX_FIELD="composite"
+INDEX_FIELD="person"
 
 def build_index_map():
     ctx = build_session_context()
