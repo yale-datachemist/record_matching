@@ -38,7 +38,7 @@ recordId: int64
 """
 
 TEMPLATES = {
-    "composite": "{{record}}",
+    #"composite": "{{record}}",
     "title": "{{#if title}}Title: {{title}}\n{{/if}}",
     "person": "{{#if person}}Person: {{person}}\n{{/if}}",
     "roles": "{{#if roles}}Roles: {{roles}}\n{{/if}}",
@@ -47,9 +47,9 @@ TEMPLATES = {
     "subjects": "{{#if subjects}}Subjects: {{subjects}}\n{{/if}}",
     "genres": "{{#if genres}}Genres: {{genres}}\n{{/if}}",
     "relatedwork": "{{#if relatedwork}}Related work: {{relatedwork}}\n{{/if}}",
-    "nametitle": "Person: {{person}}\n{{#if title}}Title: {{title}}\n{{/if}}",
-    "namesubjects": "Person: {{person}}\n{{#if subjects}}Subjects: {{subjects}}\n{{/if}}",
-    "personroles": "Person: {{person}}\nRoles: {{roles}}\n",
+    #"nametitle": "Person: {{person}}\n{{#if title}}Title: {{title}}\n{{/if}}",
+    #"namesubjects": "Person: {{person}}\n{{#if subjects}}Subjects: {{subjects}}\n{{/if}}",
+    #"personroles": "Person: {{person}}\nRoles: {{roles}}\n",
 }
 
 #TEMPLATES["composite"] = (
@@ -61,7 +61,7 @@ def eprintln(string):
     print(string, file=sys.stderr)
 
 COLUMNS_OF_INTEREST = [
-    "record",
+    #"record",
     "title",
     "person",
     "roles",
