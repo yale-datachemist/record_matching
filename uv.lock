@@ -707,7 +707,7 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "vectorlink-gpu" },
-    { name = "vectorlink-py" },
+    { name = "vectorlink" },
 ]
 
 [package.metadata]
@@ -718,7 +718,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.6.1" },
     { name = "scipy", specifier = ">=1.15.1" },
     { name = "vectorlink-gpu", git = "ssh://git@github.com/vectorlink-ai/vectorlink-gpu" },
-    { name = "vectorlink-py", git = "ssh://git@github.com/vectorlink-ai/vectorlink.py" },
+    { name = "vectorlink", git = "ssh://git@github.com/vectorlink-ai/vectorlink.py" },
 ]
 
 [[package]]
@@ -918,7 +918,7 @@ wheels = [
 [[package]]
 name = "vectorlink-gpu"
 version = "0.1.0"
-source = { git = "ssh://git@github.com/vectorlink-ai/vectorlink-gpu#9e3b22f7331b485a008ebc5647921509a2941bd0" }
+source = { git = "ssh://git@github.com/vectorlink-ai/vectorlink-gpu#d9631e408bb4e5a314d691328d485dfb2af8e02e" }
 dependencies = [
     { name = "datafusion" },
     { name = "numba" },
@@ -927,9 +927,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "vectorlink-py"
+name = "vectorlink"
 version = "0.1.0"
-source = { git = "ssh://git@github.com/vectorlink-ai/vectorlink.py#08c498f8139d9124cd43f101a08d7e0f5ec0511d" }
+source = { git = "ssh://git@github.com/vectorlink-ai/vectorlink.py#4037b5642a2ed51b8306576bb3f50493e7645728" }
 dependencies = [
     { name = "backoff" },
     { name = "black" },

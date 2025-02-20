@@ -1,6 +1,6 @@
 from .context import build_session_context, EMBEDDING_SIZE, MODEL
-from vectorlink_py import template as tpl, dedup, embed
-from vectorlink_py.utils import name_to_torch_type
+from vectorlink import template as tpl, dedup, embed
+from vectorlink.utils import name_to_torch_type
 import sys
 import datafusion as df
 from typing import Optional, Dict, Literal, List

@@ -11,7 +11,7 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "scipy>=1.15.1",
     "vectorlink-gpu",
-    "vectorlink-py",
+    "vectorlink",
 ]
 
 [build-system]
@@ -40,4 +40,4 @@ run-all = "record_matching.main:main"
 
 [tool.uv.sources]
 vectorlink-gpu = { git = "ssh://git@github.com/vectorlink-ai/vectorlink-gpu" }
-vectorlink-py = { git = "ssh://git@github.com/vectorlink-ai/vectorlink.py" }
+vectorlink = { git = "ssh://git@github.com/vectorlink-ai/vectorlink.py" }
