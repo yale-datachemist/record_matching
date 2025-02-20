@@ -63,7 +63,7 @@ WEIGHTS_SCHEMA = pa.schema(
     [
         pa.field("intercept", pa.float32(), nullable=False),
         pa.field("attribution", pa.float32(), nullable=False),
-        #pa.field("composite", pa.float32(), nullable=False),
+        pa.field("composite", pa.float32(), nullable=False),
         pa.field("person", pa.float32(), nullable=False),
         pa.field("provision", pa.float32(), nullable=False),
         pa.field("roles", pa.float32(), nullable=False),

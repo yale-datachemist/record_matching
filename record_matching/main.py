@@ -61,7 +61,7 @@ def eprintln(string):
     print(string, file=sys.stderr)
 
 COLUMNS_OF_INTEREST = [
-    #"record",
+    "record",
     "title",
     "person",
     "roles",
