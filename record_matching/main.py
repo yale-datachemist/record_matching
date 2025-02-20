@@ -38,7 +38,7 @@ recordId: int64
 """
 
 TEMPLATES = {
-    #"composite": "{{record}}",
+    "composite": "{{record}}",
     "title": "{{#if title}}Title: {{title}}\n{{/if}}",
     "person": "{{#if person}}Person: {{person}}\n{{/if}}",
     "roles": "{{#if roles}}Roles: {{roles}}\n{{/if}}",
