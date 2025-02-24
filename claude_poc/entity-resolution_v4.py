@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # Reduce Qdrant client logging
 logging.getLogger('qdrant_client').setLevel(logging.WARNING)
 
-BASE_PATH = "/local/path"
+BASE_PATH = "/Users/tt434/Dropbox/YUL/2025/msu/code"
 
 def generate_stable_hash(s: str) -> int:
     """Generate a stable hash for string IDs that's compatible with Qdrant"""
@@ -720,16 +720,21 @@ class EntityResolver:
         return result
 
     def train_classifier(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
-        """Train classifier with better weight control and visualization"""
+        """Train classifier with enhanced diagnostics"""
         n_features = X_train.shape[1]
         logger.info(f"Training classifier with {n_features} features")
+        logger.info(f"Training data: X shape {X_train.shape}, y shape {y_train.shape}")
         
-        # Initialize weights
-        self.weights = np.zeros(n_features, dtype=np.float32)
+        # Check for data issues
+        logger.info(f"X_train statistics: mean={X_train.mean():.4f}, std={X_train.std():.4f}, min={X_train.min():.4f}, max={X_train.max():.4f}")
+        logger.info(f"y_train: positive={sum(y_train)}, negative={len(y_train)-sum(y_train)}")
         
-        # Training parameters
+        # Initialize weights with small random values instead of zeros
+        self.weights = np.random.randn(n_features) * 0.01
+        
+         # Reduce L2 regularization
         learning_rate = 0.01
-        lambda_l2 = 0.1
+        lambda_l2 = 0.001  # Reduced from 0.1
         n_iterations = 50000
         patience = 5000
         min_improvement = 1e-7
@@ -767,13 +772,67 @@ class EntityResolver:
                 loss += lambda_l2 * np.sum(self.weights ** 2)
                 loss_history.append(loss)
                 
-                # Rest of training loop...
+                # Check for improvement
+                if loss < best_loss - min_improvement:
+                    best_loss = loss
+                    best_weights = self.weights.copy()
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+                    if patience_counter >= patience:
+                        logger.info(f"Early stopping at iteration {i}")
+                        break
+                
+                # Compute gradients
+                gradients = np.dot(X_train.T, (predictions - y_train)) / len(y_train)
+                gradients += 2 * lambda_l2 * self.weights  # Stronger L2 regularization gradient
+                
+                # Update weights
+                self.weights -= learning_rate * gradients
+                
+                # Log progress
+                if i % 1000 == 0:
+                    logger.info(f"Iteration {i}, loss: {loss:.4f}")
+                    
+                    # Log max weight magnitude for monitoring
+                    max_weight = np.max(np.abs(self.weights))
+                    logger.info(f"Max weight magnitude: {max_weight:.4f}")
+            
+            # Restore best weights
+            if best_weights is not None:
+                self.weights = best_weights
+            
+            # Calculate and log field importance (relative weights)
+            total_importance = np.sum(np.abs(self.weights))
+            if total_importance > 0:
+                self.field_importance = dict(zip(ALL_FEATURES, 
+                                            self.weights / total_importance))
+                
+            logger.info("\nTraining Summary:")
+            logger.info(f"Initial loss: {loss_history[0]:.4f}")
+            logger.info(f"Final loss: {loss_history[-1]:.4f}")
+            logger.info(f"Best loss: {best_loss:.4f}")
+            
+            # Log both actual weights and relative importance
+            logger.info("\nActual Weights:")
+            for field, weight in zip(ALL_FEATURES, self.weights):
+                logger.info(f"{field:15} weight: {weight:8.4f}")
+                
+            logger.info("\nField Importance (Normalized Weights):")
+            for field, importance in sorted(self.field_importance.items(), 
+                                        key=lambda x: abs(x[1]), reverse=True):
+                logger.info(f"{field:15} importance: {importance:8.4f}")
+                
+        except Exception as e:
+            logger.error(f"Error during training: {str(e)}")
+            raise
+
                 
             # Create visualizations
-            self.plot_training_history(loss_history, weight_history)
-            self.create_training_visualizations(plot_dir)
+            # self.plot_training_history(loss_history, weight_history)
+            # self.create_training_visualizations(plot_dir)
             
-            logger.info(f"Training visualizations saved to: {plot_dir}")
+            #logger.info(f"Training visualizations saved to: {plot_dir}")
             
         except Exception as e:
             logger.error(f"Error during training: {str(e)}")
@@ -872,7 +931,7 @@ class EntityResolver:
                 continue
         
         # After generating all predictions
-        self.visualize_precision_rules()
+        #self.visualize_precision_rules()
 
         return predictions
 
@@ -1058,8 +1117,8 @@ class EntityResolver:
             metrics["false_negative_rate"] = float(fn / (fn + tp)) if (fn + tp) > 0 else 0.0
             
             # Plot evaluation metrics
-            self.plot_evaluation_metrics(metrics, plot_dir)
-            logger.info(f"Evaluation plots saved to: {plot_dir}")
+            # self.plot_evaluation_metrics(metrics, plot_dir)
+            # logger.info(f"Evaluation plots saved to: {plot_dir}")
             
             # Log evaluation results
             logger.info("\nEvaluation Results:")
@@ -1652,7 +1711,7 @@ def main(use_imputed_dataset: bool = False):
     logger.info(f"Results: {json.dumps(results, indent=2)}")
 
     # After all processing
-    logger.info(f"\nVisualizations saved to: {plot_dir}")
+    #logger.info(f"\nVisualizations saved to: {plot_dir}")
     
     return resolver, pred_df, results
 
