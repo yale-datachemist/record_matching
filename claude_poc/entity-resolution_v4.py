@@ -120,6 +120,7 @@ class EntityResolver:
         self.id_mapping = {}
         self.match_analysis = MatchAnalysis()
         self.weights = None
+        self.intercept = 0.0  # Add intercept with default value
         self.field_importance = None
         self.plot_dir = plot_dir
 
@@ -720,9 +721,9 @@ class EntityResolver:
         return result
 
     def train_classifier(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
-        """Train classifier with enhanced diagnostics and gentler subject similarity penalty"""
+        """Train classifier with enhanced diagnostics, multi-field similarity penalties, and intercept"""
         n_features = X_train.shape[1]
-        logger.info(f"Training classifier with {n_features} features")
+        logger.info(f"Training classifier with {n_features} features plus intercept")
         logger.info(f"Training data: X shape {X_train.shape}, y shape {y_train.shape}")
         
         # Check for data issues
@@ -731,6 +732,7 @@ class EntityResolver:
         
         # Initialize weights with small random values instead of zeros
         self.weights = np.random.randn(n_features) * 0.01
+        self.intercept = np.random.randn() * 0.01  # Initialize intercept
         
         # Reduce L2 regularization
         learning_rate = 0.01
@@ -739,23 +741,49 @@ class EntityResolver:
         patience = 5000
         min_improvement = 1e-7
         
-        # Subject similarity penalty parameters - much gentler
-        subject_penalty_weight = 0.1  # Reduced from 2.0
-        subject_threshold = 0.50
+        # Field similarity penalty parameters
+        subject_penalty_weight = 0.1
+        subject_threshold = 0.55
         
-        # Identify subject similarity index in feature vector
+        title_penalty_weight = 0.1
+        title_threshold = 0.40
+        
+        provision_penalty_weight = 0.1
+        provision_threshold = 0.55
+        
+        compound_penalty_weight = 0.15
+        
+        # Identify field indices in feature vector
         subject_idx = None
+        title_idx = None
+        provision_idx = None
+        
         for i, field in enumerate(VECTOR_FIELDS):
             if field == 'subjects':
                 subject_idx = i
-                break
+            elif field == 'title':
+                title_idx = i
+            elif field == 'provision':
+                provision_idx = i
+        
+        # Find imputation status indices
+        subject_is_original_idx = None
+        provision_is_original_idx = None
+        
+        all_features = list(VECTOR_FIELDS) + ['name_similarity', 'record_threshold'] + [f'{field}_is_original' for field in IMPUTATION_FIELDS]
+        for i, field in enumerate(all_features):
+            if field == 'subjects_is_original':
+                subject_is_original_idx = i
+            elif field == 'provision_is_original':
+                provision_is_original_idx = i
         
         # Initialize tracking variables
         best_loss = float('inf')
         best_weights = None
+        best_intercept = None
         patience_counter = 0
         loss_history = []
-        weight_history = []  # Track weight evolution
+        weight_history = []
         
         # Create timestamp and directory for this training run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -764,11 +792,11 @@ class EntityResolver:
         
         try:
             for i in range(n_iterations):
-                # Store current weights
-                weight_history.append(self.weights.copy())
+                # Store current weights and intercept
+                weight_history.append(np.append(self.weights.copy(), self.intercept))
                 
-                # Forward pass
-                scores = np.dot(X_train, self.weights)
+                # Forward pass with intercept
+                scores = np.dot(X_train, self.weights) + self.intercept  # Add intercept
                 predictions = self.sigmoid(scores)
                 
                 # Compute stable cross-entropy loss
@@ -779,39 +807,93 @@ class EntityResolver:
                     (1 - y_train) * np.log(1 - predictions)
                 )
                 
-                # Add L2 regularization
+                # Add L2 regularization (only for weights, not intercept)
                 base_loss += lambda_l2 * np.sum(self.weights ** 2)
                 
-                # Add gentler subject similarity penalty if subject_idx is found
-                subject_penalty = 0
-                if subject_idx is not None:
-                    # Get subject similarities from feature matrix
-                    subject_similarities = X_train[:, subject_idx]
-                    
-                    # Calculate gradual penalty factors - proportional to how far below threshold
-                    penalty_factors = np.maximum(0, subject_threshold - subject_similarities) / subject_threshold
-                    
-                    # Apply penalty only to positive predictions (predicted matches)
-                    prediction_mask = (predictions > 0.5)
-                    
-                    # Combine factors
-                    combined_penalty = penalty_factors * prediction_mask * predictions
-                    
-                    # Final penalty - average across affected samples
-                    if np.sum(prediction_mask) > 0:
-                        subject_penalty = np.sum(combined_penalty) / np.sum(prediction_mask)
-                        if i % 1000 == 0 and subject_penalty > 0:
-                            affected = np.sum(penalty_factors > 0)
-                            logger.info(f"Subject penalty: {subject_penalty:.4f}, affecting {affected} samples")
+                # Prepare prediction mask for positive predictions (predicted matches)
+                prediction_mask = (predictions > 0.5)
                 
-                # Total loss
-                loss = base_loss + subject_penalty_weight * subject_penalty
+                # Initialize penalties
+                subject_penalty = 0
+                title_penalty = 0
+                provision_penalty = 0
+                compound_penalty = 0
+                
+                # Calculate subject penalty
+                if subject_idx is not None:
+                    subject_similarities = X_train[:, subject_idx]
+                    subject_factors = np.maximum(0, subject_threshold - subject_similarities) / subject_threshold
+                    
+                    # Only penalize if subject is original (not imputed)
+                    if subject_is_original_idx is not None:
+                        subject_is_original = X_train[:, subject_is_original_idx]
+                        subject_mask = (subject_is_original > 0.5)
+                        subject_factors = subject_factors * subject_mask  # Zero out imputed subjects
+                    
+                    subject_combined = subject_factors * prediction_mask * predictions
+                    
+                    if np.sum(prediction_mask) > 0:
+                        subject_penalty = np.sum(subject_combined) / np.sum(prediction_mask)
+                
+                # Calculate title penalty (title is always original, not in IMPUTATION_FIELDS)
+                if title_idx is not None:
+                    title_similarities = X_train[:, title_idx]
+                    title_factors = np.maximum(0, title_threshold - title_similarities) / title_threshold
+                    title_combined = title_factors * prediction_mask * predictions
+                    
+                    if np.sum(prediction_mask) > 0:
+                        title_penalty = np.sum(title_combined) / np.sum(prediction_mask)
+                
+                # Calculate provision penalty (only for non-imputed values)
+                if provision_idx is not None and provision_is_original_idx is not None:
+                    provision_similarities = X_train[:, provision_idx]
+                    provision_is_original = X_train[:, provision_is_original_idx]
+                    
+                    # Only penalize if provision is original (not imputed)
+                    provision_mask = (provision_is_original > 0.5)
+                    provision_factors = np.maximum(0, provision_threshold - provision_similarities) / provision_threshold
+                    provision_factors = provision_factors * provision_mask  # Zero out imputed provisions
+                    provision_combined = provision_factors * prediction_mask * predictions
+                    
+                    if np.sum(prediction_mask) > 0:
+                        provision_penalty = np.sum(provision_combined) / np.sum(prediction_mask)
+                
+                # Calculate compound penalty (when multiple fields have low similarity)
+                if subject_idx is not None and title_idx is not None:
+                    # For compound, only use original subjects
+                    compound_subject_factors = subject_factors
+                    if subject_is_original_idx is not None:
+                        subject_is_original = X_train[:, subject_is_original_idx]
+                        subject_mask = (subject_is_original > 0.5)
+                        compound_subject_factors = compound_subject_factors * subject_mask
+                    
+                    # Combine factors - stronger when both are low
+                    compound_factors = np.sqrt(title_factors * compound_subject_factors)
+                    compound_combined = compound_factors * prediction_mask * predictions
+                    
+                    if np.sum(prediction_mask) > 0:
+                        compound_penalty = np.sum(compound_combined) / np.sum(prediction_mask)
+                
+                # Total loss with all penalties
+                loss = (base_loss + 
+                    subject_penalty_weight * subject_penalty + 
+                    title_penalty_weight * title_penalty + 
+                    provision_penalty_weight * provision_penalty +
+                    compound_penalty_weight * compound_penalty)
+                
                 loss_history.append(loss)
+                
+                # Log penalties occasionally
+                if i % 1000 == 0:
+                    penalty_str = f"Penalties - Subject: {subject_penalty:.4f}, Title: {title_penalty:.4f}, " \
+                                f"Provision: {provision_penalty:.4f}, Compound: {compound_penalty:.4f}"
+                    logger.info(penalty_str)
                 
                 # Check for improvement
                 if loss < best_loss - min_improvement:
                     best_loss = loss
                     best_weights = self.weights.copy()
+                    best_intercept = self.intercept  # Save best intercept too
                     patience_counter = 0
                 else:
                     patience_counter += 1
@@ -819,34 +901,61 @@ class EntityResolver:
                         logger.info(f"Early stopping at iteration {i}")
                         break
                 
-                # Compute gradients
+                # Compute gradients for weights
                 base_gradient = np.dot(X_train.T, (predictions - y_train)) / len(y_train)
                 base_gradient += 2 * lambda_l2 * self.weights  # L2 regularization gradient
                 
-                # Add penalty gradient if needed - gentler approach
+                # Compute gradient for intercept (no regularization for intercept)
+                intercept_gradient = np.mean(predictions - y_train)
+                
+                # Add penalty gradients for weights
                 penalty_gradient = np.zeros_like(base_gradient)
-                if subject_idx is not None and np.sum(prediction_mask) > 0:
-                    # Weight contributions by penalty factors
-                    weighted_contributions = X_train * (penalty_factors * prediction_mask).reshape(-1, 1)
-                    penalty_gradient = subject_penalty_weight * np.sum(weighted_contributions, axis=0) / np.sum(prediction_mask)
                 
-                # Combined gradient
-                gradients = base_gradient + penalty_gradient
+                if np.sum(prediction_mask) > 0:
+                    # Subject penalty gradient
+                    if subject_idx is not None:
+                        subject_weighted = X_train * (subject_factors * prediction_mask).reshape(-1, 1)
+                        subject_grad = subject_penalty_weight * np.sum(subject_weighted, axis=0) / np.sum(prediction_mask)
+                        penalty_gradient += subject_grad
+                    
+                    # Title penalty gradient
+                    if title_idx is not None:
+                        title_weighted = X_train * (title_factors * prediction_mask).reshape(-1, 1)
+                        title_grad = title_penalty_weight * np.sum(title_weighted, axis=0) / np.sum(prediction_mask)
+                        penalty_gradient += title_grad
+                    
+                    # Provision penalty gradient
+                    if provision_idx is not None and provision_is_original_idx is not None:
+                        provision_weighted = X_train * (provision_factors * prediction_mask).reshape(-1, 1)
+                        provision_grad = provision_penalty_weight * np.sum(provision_weighted, axis=0) / np.sum(prediction_mask)
+                        penalty_gradient += provision_grad
+                    
+                    # Compound penalty gradient
+                    if subject_idx is not None and title_idx is not None:
+                        compound_weighted = X_train * (compound_factors * prediction_mask).reshape(-1, 1)
+                        compound_grad = compound_penalty_weight * np.sum(compound_weighted, axis=0) / np.sum(prediction_mask)
+                        penalty_gradient += compound_grad
                 
-                # Update weights
-                self.weights -= learning_rate * gradients
+                # Combined gradients
+                weight_gradients = base_gradient + penalty_gradient
+                
+                # Update weights and intercept
+                self.weights -= learning_rate * weight_gradients
+                self.intercept -= learning_rate * intercept_gradient
                 
                 # Log progress
                 if i % 1000 == 0:
-                    logger.info(f"Iteration {i}, loss: {loss:.4f}, base: {base_loss:.4f}")
+                    logger.info(f"Iteration {i}, loss: {loss:.4f}, base: {base_loss:.4f}, intercept: {self.intercept:.4f}")
                     
                     # Log max weight magnitude for monitoring
                     max_weight = np.max(np.abs(self.weights))
                     logger.info(f"Max weight magnitude: {max_weight:.4f}")
             
-            # Restore best weights
+            # Restore best weights and intercept
             if best_weights is not None:
                 self.weights = best_weights
+            if best_intercept is not None:
+                self.intercept = best_intercept
             
             # Calculate and log field importance (relative weights)
             total_importance = np.sum(np.abs(self.weights))
@@ -858,6 +967,7 @@ class EntityResolver:
             logger.info(f"Initial loss: {loss_history[0]:.4f}")
             logger.info(f"Final loss: {loss_history[-1]:.4f}")
             logger.info(f"Best loss: {best_loss:.4f}")
+            logger.info(f"Intercept: {self.intercept:.4f}")
             
             # Log both actual weights and relative importance
             logger.info("\nActual Weights:")
@@ -945,7 +1055,9 @@ class EntityResolver:
                 logger.info(f"Score after sigmoid: {score}")
 
                 # Get base prediction score
-                score = float(self.sigmoid(np.dot(features, self.weights)))
+                # Get prediction score with intercept
+                score = float(self.sigmoid(np.dot(features, self.weights) + self.intercept))
+                
                 
                 # Store similarities for analysis
                 field_sims = dict(zip(ALL_FEATURES, features))

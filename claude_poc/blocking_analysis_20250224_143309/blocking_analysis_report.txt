@@ -1,0 +1,27 @@
+Blocking Key Analysis Report
+===========================
+
+Summary Statistics:
+-----------------
+total_true_matches: 38796
+matches_with_vectors: 38796
+matches_missing_vectors: 0
+mean_similarity: 0.9875984526982458
+min_similarity: 0.7794053594445765
+max_similarity: 1.0000000000000033
+std_similarity: 0.02995149542398299
+below_threshold: 0
+above_threshold: 38796
+
+Similarity Distribution:
+----------------------
+0th percentile: 0.779
+10th percentile: 0.939
+25th percentile: 1.000
+50th percentile: 1.000
+75th percentile: 1.000
+90th percentile: 1.000
+100th percentile: 1.000
+
+Potentially Problematic Matches (similarity < 0.70):
+----------------------------------------------
