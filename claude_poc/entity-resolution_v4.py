@@ -602,7 +602,7 @@ class EntityResolver:
             features.append(1.0)
         
         # Add record threshold feature
-        features.append(1.0 if record_sim > 0.50 else 0.0)
+        features.append(1.0 if record_sim > 0.55 else 0.0)
         
         # Add imputation flags (1 if both records have original values, 0 if either was imputed)
         for field in IMPUTATION_FIELDS:
@@ -720,7 +720,7 @@ class EntityResolver:
         return result
 
     def train_classifier(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
-        """Train classifier with enhanced diagnostics"""
+        """Train classifier with enhanced diagnostics and gentler subject similarity penalty"""
         n_features = X_train.shape[1]
         logger.info(f"Training classifier with {n_features} features")
         logger.info(f"Training data: X shape {X_train.shape}, y shape {y_train.shape}")
@@ -732,12 +732,23 @@ class EntityResolver:
         # Initialize weights with small random values instead of zeros
         self.weights = np.random.randn(n_features) * 0.01
         
-         # Reduce L2 regularization
+        # Reduce L2 regularization
         learning_rate = 0.01
-        lambda_l2 = 0.001  # Reduced from 0.1
+        lambda_l2 = 0.001
         n_iterations = 50000
         patience = 5000
         min_improvement = 1e-7
+        
+        # Subject similarity penalty parameters - much gentler
+        subject_penalty_weight = 0.1  # Reduced from 2.0
+        subject_threshold = 0.50
+        
+        # Identify subject similarity index in feature vector
+        subject_idx = None
+        for i, field in enumerate(VECTOR_FIELDS):
+            if field == 'subjects':
+                subject_idx = i
+                break
         
         # Initialize tracking variables
         best_loss = float('inf')
@@ -763,13 +774,38 @@ class EntityResolver:
                 # Compute stable cross-entropy loss
                 epsilon = 1e-15
                 predictions = np.clip(predictions, epsilon, 1 - epsilon)
-                loss = -np.mean(
+                base_loss = -np.mean(
                     y_train * np.log(predictions) + 
                     (1 - y_train) * np.log(1 - predictions)
                 )
                 
                 # Add L2 regularization
-                loss += lambda_l2 * np.sum(self.weights ** 2)
+                base_loss += lambda_l2 * np.sum(self.weights ** 2)
+                
+                # Add gentler subject similarity penalty if subject_idx is found
+                subject_penalty = 0
+                if subject_idx is not None:
+                    # Get subject similarities from feature matrix
+                    subject_similarities = X_train[:, subject_idx]
+                    
+                    # Calculate gradual penalty factors - proportional to how far below threshold
+                    penalty_factors = np.maximum(0, subject_threshold - subject_similarities) / subject_threshold
+                    
+                    # Apply penalty only to positive predictions (predicted matches)
+                    prediction_mask = (predictions > 0.5)
+                    
+                    # Combine factors
+                    combined_penalty = penalty_factors * prediction_mask * predictions
+                    
+                    # Final penalty - average across affected samples
+                    if np.sum(prediction_mask) > 0:
+                        subject_penalty = np.sum(combined_penalty) / np.sum(prediction_mask)
+                        if i % 1000 == 0 and subject_penalty > 0:
+                            affected = np.sum(penalty_factors > 0)
+                            logger.info(f"Subject penalty: {subject_penalty:.4f}, affecting {affected} samples")
+                
+                # Total loss
+                loss = base_loss + subject_penalty_weight * subject_penalty
                 loss_history.append(loss)
                 
                 # Check for improvement
@@ -784,15 +820,25 @@ class EntityResolver:
                         break
                 
                 # Compute gradients
-                gradients = np.dot(X_train.T, (predictions - y_train)) / len(y_train)
-                gradients += 2 * lambda_l2 * self.weights  # Stronger L2 regularization gradient
+                base_gradient = np.dot(X_train.T, (predictions - y_train)) / len(y_train)
+                base_gradient += 2 * lambda_l2 * self.weights  # L2 regularization gradient
+                
+                # Add penalty gradient if needed - gentler approach
+                penalty_gradient = np.zeros_like(base_gradient)
+                if subject_idx is not None and np.sum(prediction_mask) > 0:
+                    # Weight contributions by penalty factors
+                    weighted_contributions = X_train * (penalty_factors * prediction_mask).reshape(-1, 1)
+                    penalty_gradient = subject_penalty_weight * np.sum(weighted_contributions, axis=0) / np.sum(prediction_mask)
+                
+                # Combined gradient
+                gradients = base_gradient + penalty_gradient
                 
                 # Update weights
                 self.weights -= learning_rate * gradients
                 
                 # Log progress
                 if i % 1000 == 0:
-                    logger.info(f"Iteration {i}, loss: {loss:.4f}")
+                    logger.info(f"Iteration {i}, loss: {loss:.4f}, base: {base_loss:.4f}")
                     
                     # Log max weight magnitude for monitoring
                     max_weight = np.max(np.abs(self.weights))
@@ -823,17 +869,6 @@ class EntityResolver:
                                         key=lambda x: abs(x[1]), reverse=True):
                 logger.info(f"{field:15} importance: {importance:8.4f}")
                 
-        except Exception as e:
-            logger.error(f"Error during training: {str(e)}")
-            raise
-
-                
-            # Create visualizations
-            # self.plot_training_history(loss_history, weight_history)
-            # self.create_training_visualizations(plot_dir)
-            
-            #logger.info(f"Training visualizations saved to: {plot_dir}")
-            
         except Exception as e:
             logger.error(f"Error during training: {str(e)}")
             raise
