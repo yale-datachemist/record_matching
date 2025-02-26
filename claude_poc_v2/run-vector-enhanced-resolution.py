@@ -420,11 +420,11 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Run vector-enhanced entity resolution')
-    parser.add_argument('--entity-file', dest='entity_file', default='entity_dataset.csv',
+    parser.add_argument('--entity-file', dest='entity_file', default='benchmark_data_records.csv',
                        help='Path to entity data CSV file')
-    parser.add_argument('--ground-truth', dest='ground_truth_file', default='data_matches.csv',
+    parser.add_argument('--ground-truth', dest='ground_truth_file', default='benchmark_data_matches_expanded.csv',
                        help='Path to ground truth matches CSV file')
-    parser.add_argument('--vector-file', dest='vector_file', default='entity_dataset_vectorized.csv',
+    parser.add_argument('--vector-file', dest='vector_file', default='benchmark_data_records_vectorized.csv',
                        help='Path to vector data file (optional)')
     parser.add_argument('--output-dir', dest='output_dir', default='vector_results',
                        help='Directory to save results')

@@ -132,7 +132,7 @@ The solution correctly disambiguates the Franz Schubert entities by:
 To run the solution with your data:
 
 ```bash
-python run-vector-enhanced-resolution.py --entity-file entity_dataset.csv --ground-truth data_matches.csv --vector-file vector_dataset.csv
+python run-vector-enhanced-resolution.py --entity-file benchmark_data_records.csv --ground-truth benchmark_data_matches_expanded.csv --vector-file benchmark_data_records_vectorized.csv
 ```
 
 The system will:
