@@ -1,0 +1,22 @@
+{
+  "num_clusters": 316,
+  "avg_cluster_size": 7.449367088607595,
+  "max_cluster_size": 398,
+  "singleton_clusters": 281,
+  "multi_record_clusters": 35,
+  "singleton_percent": 0.8892405063291139,
+  "multi_record_percent": 0.11075949367088607,
+  "precision": 0.9973539078602863,
+  "recall": 0.9229559748427673,
+  "f1": 0.9587137540496399,
+  "accuracy": 0.9602536343952985,
+  "evaluated_pairs": 77592,
+  "missing_pairs": 0,
+  "true_negative": 38701,
+  "false_positive": 95,
+  "false_negative": 2989,
+  "true_positive": 35807,
+  "error_count": 3084,
+  "disambiguated_names": 16,
+  "percent_disambiguated": 0.15384615384615385
+}

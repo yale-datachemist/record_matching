@@ -1,0 +1,13 @@
+{
+  "metric_weights": {
+    "name_similarity": 0.4094044748566805,
+    "vector_similarity": 0.41857927429330144,
+    "context_similarity": 0.04078766010110211,
+    "temporal_similarity": 0.12983752518206176,
+    "domain_similarity": 0.00139106556685411
+  },
+  "min_similarity": 0.45000000000000007,
+  "is_trained": true,
+  "vector_dim": 3072,
+  "model_path": "vector_results/vector_resolver_model.json.sklearn"
+}

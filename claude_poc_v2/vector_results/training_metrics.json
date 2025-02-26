@@ -1,0 +1,21 @@
+{
+  "feature_importance": {
+    "name_similarity": 0.4094044748566805,
+    "vector_similarity": 0.41857927429330144,
+    "context_similarity": 0.04078766010110211,
+    "domain_similarity": 0.00139106556685411,
+    "temporal_similarity": 0.12983752518206176
+  },
+  "metric_weights": {
+    "name_similarity": 0.4094044748566805,
+    "vector_similarity": 0.41857927429330144,
+    "context_similarity": 0.04078766010110211,
+    "temporal_similarity": 0.12983752518206176,
+    "domain_similarity": 0.00139106556685411
+  },
+  "optimal_threshold": 0.45000000000000007,
+  "cv_precision": 0.999458995248441,
+  "cv_recall": 0.9998711174120377,
+  "cv_f1": 0.9996649966006258,
+  "error_count": 0
+}
